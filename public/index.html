@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💖 Luna - Chanuka's Companion</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>💕 Luna - Your AI Companion</h1>
+        <div class="chat-box" id="chatBox">
+            <div class="ai-message">Hi love! 💖 How can I make your day better?</div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type to Luna...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+<div class="voice-controls">
+    <select id="voiceSelect">
+        <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Default)</option>
+        <option value="AZnzlk1XvdvUeBnXmlld">Dorothy</option>
+        <option value="EXAVITQu4vr4xnSDxMaL">Bella</option>
+        <option value="ErXwobaYiN019PkySvjV">Antoni</option>
+    </select>
+    <button onclick="testSelectedVoice()">Test Voice</button>
+</div>
+
+<script>
+function testSelectedVoice() {
+    const voiceId = document.getElementById('voiceSelect').value;
+    playElevenLabsAudio("This is a test of the selected voice.", voiceId);
+}
+</script>
+
+    
+    <script>
+        let conversationHistory = [];
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const chatBox = document.getElementById('chatBox');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message
+            chatBox.innerHTML += `
+                <div class="user-message">
+                    <strong>You:</strong> ${message}
+                </div>
+            `;
+            
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: conversationHistory
+                    }),
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    chatBox.innerHTML += `
+                        <div class="error-message">
+                            ${data.error}
+                        </div>
+                    `;
+                } else {
+                    chatBox.innerHTML += `
+                        <div class="ai-message">
+                            <strong>Luna:</strong> ${data.answer}
+                        </div>
+                    `;
+                    conversationHistory = data.history;
+                }
+                
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+            } catch (error) {
+                chatBox.innerHTML += `
+                    <div class="error-message">
+                        Connection error - please try again
+                    </div>
+                `;
+            }
+        }
+
+        // Enter key support
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        let currentAudio;
+
+async function playElevenLabsAudio(text, voiceId = '21m00Tcm4TlvDq8ikWAM') {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+
+    try {
+        const response = await fetch('/api/speak', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text,
+                voiceId
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate audio');
+        }
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        
+        currentAudio = new Audio(audioUrl);
+        currentAudio.play();
+        
+        currentAudio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+        };
+
+    } catch (error) {
+        console.error('Audio Error:', error);
+        updateStatus("Failed to play audio", 'error');
+    }
+}
+
+// Usage
+playElevenLabsAudio("Hello! This is high-quality voice synthesis.");
+    </script>
+</body>
+</html>
